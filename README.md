@@ -1,10 +1,10 @@
 # Bienvenido al coding-interview-frontend
 
 ## Descripción
-Acá tienes todos los assets que necesitas para llevar a cabo una pequeña prueba técnica. El objetivo es que puedas demostrar tus habilidades de programación y de UI. El proyecto consiste de una pequeña calculadora que te muestra cual cuanto vas a recibir si quieres cambiar una determinada cantidad de una moneda a otra.
+Acá tienes todos los assets que necesitas para llevar a cabo una pequeña prueba técnica. El objetivo es que puedas demostrar tus habilidades de programación y de UI. El proyecto consiste de una pequeña calculadora que te muestra cuanto vas a recibir si quieres cambiar una determinada cantidad de una moneda a otra.
 
 ## Características
-1. Hay dos tipos de monedas: "FIATS" y "CRYPTOS".
+1. Hay dos tipos de monedas: "FIAT" y "CRYPTO".
 2. La tasa de cambio la podrás obtener de nuestro API público.
 3. La moneda del input 
 
