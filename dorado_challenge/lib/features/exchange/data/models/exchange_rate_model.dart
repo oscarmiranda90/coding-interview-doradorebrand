@@ -1,6 +1,6 @@
-import '../../../../core/constants/app_constants.dart';
 import '../../../../core/error/exceptions.dart';
 import '../../../../shared/models/currency.dart';
+import '../../domain/entities/exchange_direction.dart';
 import '../../domain/entities/exchange_rate.dart';
 
 class ExchangeRateModel {
@@ -38,11 +38,14 @@ class ExchangeRateModel {
     required Currency fromCurrency,
     required Currency toCurrency,
     required double inputAmount,
-    required int type,
+    required ExchangeDirection direction,
   }) {
-    final double outputAmount = type == AppConstants.typeFiatToCrypto
-        ? inputAmount * fiatToCryptoExchangeRate
-        : inputAmount / fiatToCryptoExchangeRate;
+    // fiatToCryptoExchangeRate = how many FIAT per 1 CRYPTO
+    // CRYPTO→FIAT: multiply; FIAT→CRYPTO: divide
+    final double outputAmount = switch (direction) {
+      ExchangeDirection.cryptoToFiat => inputAmount * fiatToCryptoExchangeRate,
+      ExchangeDirection.fiatToCrypto => inputAmount / fiatToCryptoExchangeRate,
+    };
 
     return ExchangeRate(
       fromCurrency: fromCurrency,

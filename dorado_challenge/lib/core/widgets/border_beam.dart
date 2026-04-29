@@ -1,21 +1,29 @@
 import 'dart:math' as math;
-import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
-/// Animated traveling border-beam effect.
+/// Animated traveling border-beam effect with aurora borealis-style ripple.
 ///
-/// Wraps [child] and overlays a glowing beam that continuously traces
-/// the shape's perimeter. Works with any border-radius, including full
-/// circles (radius = width / 2).
+/// A soft glow travels along a configurable arc of the widget's border.
+/// The luminance is non-uniform — overlapping sine waves at different spatial
+/// frequencies and temporal speeds create bright/dim patches that shift over
+/// time, giving the curtain-of-light aurora feel.
 ///
-/// Usage:
-/// ```dart
-/// BorderBeam(
-///   borderRadius: 26,         // match your shape
-///   child: MyWidget(),
-/// )
-/// ```
+/// **Path control**
+/// - [arcStart]  – where the beam begins (0.0–1.0, clockwise from top-center).
+///   0.0 = top · 0.25 = right · 0.5 = bottom · 0.75 = left
+/// - [arcLength] – fraction of the perimeter to travel (0.25 = quarter arc).
+///
+/// **Speed control**
+/// - [duration]      – one full beam cycle. Shorter = faster.
+/// - [pauseDuration] – idle time between cycles. Defaults to zero (instant
+///   restart). e.g. `Duration(seconds: 2)` adds a 2 s pause after each pass.
+///
+/// **Aurora tuning**
+/// - [rippleIntensity] – 0.0 = smooth gradient · 1.0 = full aurora churn.
+/// - [trailFraction]   – length of the tail relative to the active arc.
+/// - [strokeWidth]     – core beam thickness.
+/// - [color]           – primary beam tint (yellow by default).
 class BorderBeam extends StatefulWidget {
   const BorderBeam({
     super.key,
@@ -23,27 +31,42 @@ class BorderBeam extends StatefulWidget {
     required this.borderRadius,
     this.color = const Color(0xFFE9FF47),
     this.strokeWidth = 2.5,
-    this.beamFraction = 0.32,
-    this.duration = const Duration(milliseconds: 2200),
+    this.trailFraction = 0.55,
+    this.arcStart = 0.25,
+    this.arcLength = 0.25,
+    this.duration = const Duration(milliseconds: 1800),
+    this.pauseDuration = Duration.zero,
+    this.rippleIntensity = 0.72,
   });
 
   final Widget child;
 
-  /// Corner radius — must match the actual shape radius.
-  /// Pass `width / 2` for a full circle.
+  /// Corner radius of the shape. Use `width / 2` for a full circle.
   final double borderRadius;
 
-  /// Head color of the beam (defaults to neobrutalist yellow).
+  /// Primary beam tint.
   final Color color;
 
-  /// Width of the beam stroke in logical pixels.
+  /// Core stroke width in logical pixels.
   final double strokeWidth;
 
-  /// Fraction of the perimeter the trailing glow covers (0–1).
-  final double beamFraction;
+  /// Tail length as a fraction of the active arc (0–1).
+  final double trailFraction;
 
-  /// Duration of one full revolution.
+  /// Arc start — fraction of the full perimeter (0–1).
+  final double arcStart;
+
+  /// Arc span — fraction of the full perimeter (0–1).
+  final double arcLength;
+
+  /// Duration of one beam pass. Shorter = faster.
   final Duration duration;
+
+  /// Pause between cycles. `Duration.zero` = immediate restart.
+  final Duration pauseDuration;
+
+  /// Aurora ripple intensity — 0 = smooth, 1 = heavy churn.
+  final double rippleIntensity;
 
   @override
   State<BorderBeam> createState() => _BorderBeamState();
@@ -56,8 +79,27 @@ class _BorderBeamState extends State<BorderBeam>
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(vsync: this, duration: widget.duration)
-      ..repeat();
+    _ctrl = AnimationController(vsync: this, duration: widget.duration);
+    _runCycle();
+  }
+
+  Future<void> _runCycle() async {
+    while (mounted) {
+      _ctrl.value = 0;
+      await _ctrl.forward();
+      if (!mounted) break;
+      if (widget.pauseDuration > Duration.zero) {
+        await Future<void>.delayed(widget.pauseDuration);
+      }
+    }
+  }
+
+  @override
+  void didUpdateWidget(BorderBeam old) {
+    super.didUpdateWidget(old);
+    if (old.duration != widget.duration) {
+      _ctrl.duration = widget.duration;
+    }
   }
 
   @override
@@ -75,7 +117,10 @@ class _BorderBeamState extends State<BorderBeam>
           borderRadius: widget.borderRadius,
           color: widget.color,
           strokeWidth: widget.strokeWidth,
-          beamFraction: widget.beamFraction,
+          trailFraction: widget.trailFraction,
+          arcStart: widget.arcStart,
+          arcLength: widget.arcLength,
+          rippleIntensity: widget.rippleIntensity,
         ),
         child: widget.child,
       ),
@@ -93,17 +138,43 @@ class _BeamPainter extends CustomPainter {
     required this.borderRadius,
     required this.color,
     required this.strokeWidth,
-    required this.beamFraction,
+    required this.trailFraction,
+    required this.arcStart,
+    required this.arcLength,
+    required this.rippleIntensity,
   }) : super(repaint: animation);
 
   final Animation<double> animation;
   final double borderRadius;
   final Color color;
   final double strokeWidth;
-  final double beamFraction;
+  final double trailFraction;
+  final double arcStart;
+  final double arcLength;
+  final double rippleIntensity;
 
-  // Number of gradient steps along the trail
-  static const int _steps = 22;
+  // More steps = smoother aurora gradient between bright/dim patches
+  static const int _steps = 32;
+
+  // ---------------------------------------------------------------------------
+  // Aurora noise — three sine waves with incommensurable frequencies so they
+  // never perfectly repeat, producing organic-looking interference patterns.
+  // `t`    = normalised position along trail   [0 = tail, 1 = head]
+  // `time` = animation.value                  [0, 1) wrapping each cycle
+  // Returns a value in approximately [-1, 1].
+  // ---------------------------------------------------------------------------
+  double _aurora(double t, double time) {
+    final w1 = math.sin(
+      t * 9.1 + time * math.pi * 4.3,
+    ); // fast spatial, medium temporal
+    final w2 = math.sin(
+      t * 3.7 - time * math.pi * 7.1,
+    ); // slow spatial, fast temporal
+    final w3 = math.sin(
+      t * 17.3 + time * math.pi * 2.2,
+    ); // very fast spatial, slow temporal
+    return w1 * 0.42 + w2 * 0.34 + w3 * 0.24; // weighted sum ≈ [-1, 1]
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -120,92 +191,136 @@ class _BeamPainter extends CustomPainter {
     final metric = metrics.first;
     final total = metric.length;
 
-    final beamLen = total * beamFraction;
-    final headDist = animation.value * total;
+    final arcStartDist = arcStart * total;
+    final arcLen = arcLength * total;
+    final arcEndDist = arcStartDist + arcLen;
+    final time = animation.value;
+
+    final headDist = arcStartDist + time * arcLen;
+    final trailLen = arcLen * trailFraction;
+    final trailStartDist = math.max(arcStartDist, headDist - trailLen);
+
+    // ── Envelope: smooth fade-in at start, fade-out at end ───────────────
+    const kFadeIn = 0.15;
+    final fadeIn = ((headDist - arcStartDist) / (arcLen * kFadeIn)).clamp(
+      0.0,
+      1.0,
+    );
+
+    const kFadeOut = 0.20;
+    final fadeOutStart = arcEndDist - arcLen * kFadeOut;
+    final fadeOut = headDist >= fadeOutStart
+        ? 1.0 -
+              ((headDist - fadeOutStart) / (arcLen * kFadeOut)).clamp(0.0, 1.0)
+        : 1.0;
+
+    final envelope = fadeIn * fadeOut;
+    if (envelope < 0.01) return;
+
+    // ── Per-segment aurora rendering ─────────────────────────────────────
+    final trailSpan = headDist - trailStartDist;
+    if (trailSpan < 0.5) return;
 
     for (int i = 0; i < _steps; i++) {
-      final t = i / _steps; // 0 = tail → 1 = head
-      final alpha = math.pow(t, 1.8).toDouble();
+      final t = (i + 1) / _steps; // 0 = tail → 1 = head
 
-      final segStart = (headDist - beamLen + t * beamLen);
-      final segEnd = (headDist - beamLen + (t + 1.0 / _steps) * beamLen);
+      // Base luminance from power-curve falloff
+      final base = math.pow(t, 1.6).toDouble();
 
-      // Outer bloom — wide, blurred, dim
-      _drawSeg(
-        canvas,
-        metric,
-        total,
-        segStart,
-        segEnd,
+      // Aurora ripple modulation — shifts the luminance up and down along path
+      final ripple = _aurora(t, time) * rippleIntensity;
+      // Keep it positive; ripple can boost (+) or dim (−) each patch
+      final luminance = (base + ripple * base * 0.85).clamp(0.0, 1.6);
+
+      // Width pulsation — aurora curtains expand and contract
+      final widthMod = 1.0 + _aurora(t, time + 0.5) * 0.45 * rippleIntensity;
+
+      // Color temperature shift: yellow ↔ warm white (aurora shimmer)
+      final tempShift =
+          ((_aurora(t, time + 0.25) + 1) / 2) * 0.28 * rippleIntensity;
+      final segColor = Color.lerp(color, Colors.white, tempShift)!;
+
+      final segStart = (trailStartDist + (i / _steps) * trailSpan).clamp(
+        arcStartDist,
+        arcEndDist,
+      );
+      final segEnd = (trailStartDist + ((i + 1) / _steps) * trailSpan).clamp(
+        arcStartDist,
+        arcEndDist,
+      );
+      if (segEnd - segStart < 0.4) continue;
+
+      final extractedSeg = metric.extractPath(segStart, segEnd);
+
+      // Layer 1 — wide outer bloom
+      canvas.drawPath(
+        extractedSeg,
         Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = strokeWidth * 3.0
+          ..strokeWidth = strokeWidth * 6.5 * widthMod
           ..strokeCap = StrokeCap.round
-          ..color = color.withValues(alpha: alpha * 0.22)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6),
+          ..color = segColor.withValues(
+            alpha: (luminance * 0.09 * envelope).clamp(0.0, 1.0),
+          )
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 13),
       );
 
-      // Core beam stroke
-      _drawSeg(
-        canvas,
-        metric,
-        total,
-        segStart,
-        segEnd,
+      // Layer 2 — mid glow
+      canvas.drawPath(
+        extractedSeg,
         Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = strokeWidth
+          ..strokeWidth = strokeWidth * 3.2 * widthMod
           ..strokeCap = StrokeCap.round
-          ..color = color.withValues(alpha: alpha * 0.95),
-      );
-    }
-
-    // Bright head flash: white bloom + yellow dot
-    final headT = metric.getTangentForOffset(headDist % total);
-    if (headT != null) {
-      canvas.drawCircle(
-        headT.position,
-        strokeWidth * 1.8,
-        Paint()
-          ..color = Colors.white.withValues(alpha: 0.80)
+          ..color = segColor.withValues(
+            alpha: (luminance * 0.28 * envelope).clamp(0.0, 1.0),
+          )
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5),
       );
-      canvas.drawCircle(
-        headT.position,
-        strokeWidth * 0.75,
-        Paint()..color = color,
+
+      // Layer 3 — core beam
+      canvas.drawPath(
+        extractedSeg,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = strokeWidth * (0.8 + widthMod * 0.2)
+          ..strokeCap = StrokeCap.round
+          ..color = segColor.withValues(
+            alpha: (luminance * 0.82 * envelope).clamp(0.0, 1.0),
+          )
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.2),
       );
     }
-  }
 
-  /// Draws a path segment between [start] and [end] distances,
-  /// correctly handling wrap-around at the path seam.
-  void _drawSeg(
-    Canvas canvas,
-    ui.PathMetric metric,
-    double total,
-    double start,
-    double end,
-    Paint paint,
-  ) {
-    // Normalise both values into [0, total)
-    start = start % total;
-    end = end % total;
-
-    const minLen = 0.5; // skip trivially small segments
-
-    if (start <= end) {
-      if (end - start > minLen) {
-        canvas.drawPath(metric.extractPath(start, end), paint);
-      }
-    } else {
-      // Wraps around the path seam
-      if (total - start > minLen) {
-        canvas.drawPath(metric.extractPath(start, total), paint);
-      }
-      if (end > minLen) {
-        canvas.drawPath(metric.extractPath(0, end), paint);
-      }
+    // ── Head: layered blurry bloom (no hard dot) ─────────────────────────
+    final hDist = headDist.clamp(0.0, total - 0.01);
+    final headTangent = metric.getTangentForOffset(hDist);
+    if (headTangent != null) {
+      final hp = headTangent.position;
+      // Outer diffuse haze
+      canvas.drawCircle(
+        hp,
+        strokeWidth * 5.0,
+        Paint()
+          ..color = color.withValues(alpha: 0.13 * envelope)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 11),
+      );
+      // Mid glow
+      canvas.drawCircle(
+        hp,
+        strokeWidth * 2.8,
+        Paint()
+          ..color = color.withValues(alpha: 0.36 * envelope)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5.5),
+      );
+      // Soft bright centre
+      canvas.drawCircle(
+        hp,
+        strokeWidth * 1.3,
+        Paint()
+          ..color = Colors.white.withValues(alpha: 0.48 * envelope)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3.0),
+      );
     }
   }
 
@@ -214,5 +329,8 @@ class _BeamPainter extends CustomPainter {
       old.borderRadius != borderRadius ||
       old.color != color ||
       old.strokeWidth != strokeWidth ||
-      old.beamFraction != beamFraction;
+      old.trailFraction != trailFraction ||
+      old.arcStart != arcStart ||
+      old.arcLength != arcLength ||
+      old.rippleIntensity != rippleIntensity;
 }

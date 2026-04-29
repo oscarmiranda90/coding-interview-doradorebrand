@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/error/exceptions.dart';
 import '../../../../shared/models/currency.dart';
+import '../../domain/entities/exchange_direction.dart';
 import '../models/exchange_rate_model.dart';
 
 abstract class ExchangeRemoteDatasource {
@@ -11,7 +12,7 @@ abstract class ExchangeRemoteDatasource {
     required Currency fiatCurrency,
     required double amount,
     required String amountCurrencyId,
-    required int type,
+    required ExchangeDirection direction,
   });
 }
 
@@ -26,13 +27,13 @@ class ExchangeRemoteDatasourceImpl implements ExchangeRemoteDatasource {
     required Currency fiatCurrency,
     required double amount,
     required String amountCurrencyId,
-    required int type,
+    required ExchangeDirection direction,
   }) async {
     try {
       final response = await _dio.get(
         AppConstants.recommendationsEndpoint,
         queryParameters: {
-          'type': type,
+          'type': direction.apiType,
           'cryptoCurrencyId': cryptoCurrency.id,
           'fiatCurrencyId': fiatCurrency.id,
           'amount': amount,

@@ -1,12 +1,13 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/constants/app_constants.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../../../shared/models/currency.dart';
 import '../../data/datasources/exchange_remote_datasource.dart';
 import '../../data/repositories/exchange_repository_impl.dart';
+import '../../domain/entities/exchange_direction.dart';
 import '../../domain/usecases/get_exchange_rate.dart';
 import 'exchange_state.dart';
 
@@ -14,8 +15,10 @@ import 'exchange_state.dart';
 // Infrastructure providers
 // ---------------------------------------------------------------------------
 
+final dioProvider = Provider<Dio>((ref) => DioClient.create());
+
 final _datasourceProvider = Provider<ExchangeRemoteDatasource>(
-  (ref) => ExchangeRemoteDatasourceImpl(DioClient.instance),
+  (ref) => ExchangeRemoteDatasourceImpl(ref.watch(dioProvider)),
 );
 
 final _repositoryProvider = Provider<ExchangeRepositoryImpl>(
@@ -38,9 +41,8 @@ final selectedCryptoProvider = StateProvider<Currency>(
   (ref) => Currency.cryptoCurrencies.first,
 );
 
-/// type: 0 = CRYPTO→FIAT  |  1 = FIAT→CRYPTO
-final exchangeDirectionProvider = StateProvider<int>(
-  (ref) => AppConstants.typeFiatToCrypto,
+final exchangeDirectionProvider = StateProvider<ExchangeDirection>(
+  (ref) => ExchangeDirection.fiatToCrypto,
 );
 
 // ---------------------------------------------------------------------------
@@ -82,21 +84,26 @@ class ExchangeNotifier extends StateNotifier<ExchangeState> {
 
   void swap() {
     final current = _ref.read(exchangeDirectionProvider);
-    _ref
-        .read(exchangeDirectionProvider.notifier)
-        .state = current == AppConstants.typeFiatToCrypto
-        ? AppConstants.typeCryptoToFiat
-        : AppConstants.typeFiatToCrypto;
+    _ref.read(exchangeDirectionProvider.notifier).state = switch (current) {
+      ExchangeDirection.fiatToCrypto => ExchangeDirection.cryptoToFiat,
+      ExchangeDirection.cryptoToFiat => ExchangeDirection.fiatToCrypto,
+    };
     if (_currentAmount > 0) _fetchRate();
   }
 
   Future<void> _fetchRate() async {
-    final type = _ref.read(exchangeDirectionProvider);
+    final direction = _ref.read(exchangeDirectionProvider);
     final fiat = _ref.read(selectedFiatProvider);
     final crypto = _ref.read(selectedCryptoProvider);
 
-    final fromCurrency = type == AppConstants.typeFiatToCrypto ? fiat : crypto;
-    final toCurrency = type == AppConstants.typeFiatToCrypto ? crypto : fiat;
+    final fromCurrency = switch (direction) {
+      ExchangeDirection.fiatToCrypto => fiat,
+      ExchangeDirection.cryptoToFiat => crypto,
+    };
+    final toCurrency = switch (direction) {
+      ExchangeDirection.fiatToCrypto => crypto,
+      ExchangeDirection.cryptoToFiat => fiat,
+    };
 
     state = const ExchangeLoading();
 
@@ -105,7 +112,7 @@ class ExchangeNotifier extends StateNotifier<ExchangeState> {
         fromCurrency: fromCurrency,
         toCurrency: toCurrency,
         amount: _currentAmount,
-        type: type,
+        direction: direction,
       ),
     );
 

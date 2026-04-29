@@ -37,6 +37,7 @@ dependencies:
   freezed_annotation: ^2.4.4
   json_annotation: ^4.9.0
   google_fonts: ^6.2.1
+  shared_preferences: ^2.3.5
 
 dev_dependencies:
   flutter_test:
@@ -58,6 +59,7 @@ flutter:
   assets:
     - ../assets/cripto_currencies/
     - ../assets/fiat_currencies/
+    - ../assets/logodorado.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:

@@ -1,5 +1,6 @@
 import '../../../../core/error/failures.dart';
 import '../../../../shared/models/currency.dart';
+import '../entities/exchange_direction.dart';
 import '../entities/exchange_rate.dart';
 import '../repositories/exchange_repository.dart';
 
@@ -8,13 +9,13 @@ class GetExchangeRateParams {
     required this.fromCurrency,
     required this.toCurrency,
     required this.amount,
-    required this.type,
+    required this.direction,
   });
 
   final Currency fromCurrency;
   final Currency toCurrency;
   final double amount;
-  final int type;
+  final ExchangeDirection direction;
 }
 
 class GetExchangeRate {
@@ -29,7 +30,7 @@ class GetExchangeRate {
       fromCurrency: params.fromCurrency,
       toCurrency: params.toCurrency,
       amount: params.amount,
-      type: params.type,
+      direction: params.direction,
     );
   }
 }

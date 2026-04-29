@@ -231,8 +231,12 @@ class _CurrencyBarState extends State<CurrencyBar> {
                   onTap: _triggerSwap,
                   child: BorderBeam(
                     borderRadius: 26,
-                    strokeWidth: 2.0,
-                    beamFraction: 0.35,
+                    strokeWidth: 2.5,
+                    arcStart: 0.5,
+                    arcLength: 0.4,
+                    trailFraction: 0.60,
+                    duration: const Duration(milliseconds: 3200),
+                    pauseDuration: const Duration(milliseconds: 5000),
                     child: Container(
                       width: 52,
                       height: 52,
