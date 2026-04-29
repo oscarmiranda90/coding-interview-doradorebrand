@@ -148,12 +148,16 @@ class _CurrencyBarState extends State<CurrencyBar> {
                                 ),
                               ),
                               const SizedBox(width: 6),
-                              Text(
-                                widget.fromCurrency.displayId,
-                                style: AppTextStyles.grotesk(
-                                  fontSize: 18,
-                                  weight: FontWeight.w800,
-                                  color: AppColors.black,
+                              Flexible(
+                                child: Text(
+                                  widget.fromCurrency.displayId,
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                  style: AppTextStyles.grotesk(
+                                    fontSize: 18,
+                                    weight: FontWeight.w800,
+                                    color: AppColors.black,
+                                  ),
                                 ),
                               ),
                               if (widget.fromOptions.length > 1) ...[
@@ -206,12 +210,16 @@ class _CurrencyBarState extends State<CurrencyBar> {
                                 ),
                               ),
                               const SizedBox(width: 6),
-                              Text(
-                                widget.toCurrency.displayId,
-                                style: AppTextStyles.grotesk(
-                                  fontSize: 18,
-                                  weight: FontWeight.w800,
-                                  color: AppColors.black,
+                              Flexible(
+                                child: Text(
+                                  widget.toCurrency.displayId,
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                  style: AppTextStyles.grotesk(
+                                    fontSize: 18,
+                                    weight: FontWeight.w800,
+                                    color: AppColors.black,
+                                  ),
                                 ),
                               ),
                             ],

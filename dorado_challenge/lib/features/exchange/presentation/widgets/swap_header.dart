@@ -149,13 +149,18 @@ class SwapHeader extends StatelessWidget {
             ),
           ),
           // Title
-          Text(
-            'INTERCAMBIO',
-            style: AppTextStyles.monoCaption(
-              fontSize: 13,
-              color: AppColors.black,
-              opacity: 0.7,
-              letterSpacing: 2.0,
+          Expanded(
+            child: Text(
+              'INTERCAMBIO',
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+              style: AppTextStyles.monoCaption(
+                fontSize: 13,
+                color: AppColors.black,
+                opacity: 0.7,
+                letterSpacing: 2.0,
+              ),
             ),
           ),
           // Avatar circle

@@ -417,30 +417,37 @@ class _LogEntryTile extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '${rate.inputAmount.toStringAsFixed(2)} ${rate.fromCurrency.symbol} → ${rate.outputAmount.toStringAsFixed(decimals)} ${rate.toCurrency.symbol}',
-                style: AppTextStyles.monoCaption(
-                  fontSize: 12,
-                  color: AppColors.black,
-                  opacity: 1.0,
-                  letterSpacing: 0.5,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${rate.inputAmount.toStringAsFixed(2)} ${rate.fromCurrency.symbol} → ${rate.outputAmount.toStringAsFixed(decimals)} ${rate.toCurrency.symbol}',
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                  style: AppTextStyles.monoCaption(
+                    fontSize: 12,
+                    color: AppColors.black,
+                    opacity: 1.0,
+                    letterSpacing: 0.5,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                'TASA ${rate.rate.toStringAsFixed(2)} ${rate.toCurrency.symbol}/${rate.fromCurrency.symbol}',
-                style: AppTextStyles.monoCaption(
-                  fontSize: 10,
-                  color: AppColors.black,
-                  opacity: 0.45,
-                  letterSpacing: 0.3,
+                const SizedBox(height: 2),
+                Text(
+                  'TASA ${rate.rate.toStringAsFixed(2)} ${rate.toCurrency.symbol}/${rate.fromCurrency.symbol}',
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                  style: AppTextStyles.monoCaption(
+                    fontSize: 10,
+                    color: AppColors.black,
+                    opacity: 0.45,
+                    letterSpacing: 0.3,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
+          const SizedBox(width: 8),
           Text(
             timeStr,
             style: AppTextStyles.monoCaption(

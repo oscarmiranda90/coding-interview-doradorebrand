@@ -54,13 +54,17 @@ class _InfoRow extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          label,
-          style: AppTextStyles.monoCaption(
-            fontSize: 10,
-            color: AppColors.offWhite,
-            opacity: 0.45,
-            letterSpacing: 1.0,
+        Flexible(
+          child: Text(
+            label,
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
+            style: AppTextStyles.monoCaption(
+              fontSize: 10,
+              color: AppColors.offWhite,
+              opacity: 0.45,
+              letterSpacing: 1.0,
+            ),
           ),
         ),
         const SizedBox(width: 12),
